@@ -1,0 +1,41 @@
+{
+  "name": "detectx",
+  "version": "1.0.0",
+  "description": "DetectX - Advanced Hardware Detection & Game Compatibility Analyzer",
+  "main": "main.js",
+  "author": "Edwin Thomas",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.edwinthomas.detectx",
+    "productName": "DetectX",
+    "copyright": "Copyright © 2026 Edwin Thomas. All Rights Reserved.",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico",
+      "publisherName": "Edwin Thomas"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DetectX",
+      "license": "LICENSE"
+    }
+  },
+  "dependencies": {
+    "systeminformation": "^5.21.7"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}
