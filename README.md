@@ -30,6 +30,9 @@ Development platform: VS code 2026, Deepseek AI
 3. Follow installation wizard
 4. Launch from desktop shortcut
 
+### NOTE ⚠️:
+Windows may stop the app from launching at the first point, such as a windows defender warning screen, In that case click on the link named as "More Info" and "Run anyways" , This warning is pushed by the windows because the software does not have a CSC (Code signing Certificate) but that doesn't mean the software is unsafe to use, ITS PERFECTLY SAFE TO USE!! but every software needs that certificate, but obtaining that is currently costly
+
  ###SCREENSHOTS
  --------------------
  ### INSTALLER
