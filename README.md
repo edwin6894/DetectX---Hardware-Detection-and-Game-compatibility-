@@ -28,6 +28,20 @@ Compared to other already available softwares such as CPU-Z , GPU-Z and can you 
 3. Follow installation wizard
 4. Launch from desktop shortcut
 
+ ###SCREENSHOTS
+ --------------------
+ ### INSTALLER
+ <img width="620" height="472" alt="Screenshot 2026-08-27 143832" src="https://github.com/user-attachments/assets/2cc5e41f-a85c-4af6-86e6-95d5f9138dc9" />
+ <img width="617" height="470" alt="Screenshot 2026-08-27 143916" src="https://github.com/user-attachments/assets/b9980649-e90a-45b5-8725-105e10e63428" />
+ 
+ ### FROM THE APP
+ <img width="1100" height="857" alt="Screenshot 2026-08-27 144022" src="https://github.com/user-attachments/assets/babb4836-65aa-4859-9771-db374f2932f2" />
+ <img width="1112" height="781" alt="Screenshot 2026-08-27 144046" src="https://github.com/user-attachments/assets/cb0d7b21-71dc-40f2-a6a1-79caffeb6a5c" />
+ <img width="1097" height="857" alt="Screenshot 2026-08-27 144105" src="https://github.com/user-attachments/assets/0fd2d571-b487-4fb6-b993-96f8fd7cf8b7" />
+ <img width="1072" height="580" alt="Screenshot 2026-08-27 144121" src="https://github.com/user-attachments/assets/73fd32be-8a14-494d-8243-1fa5b95effad" />
+ <img width="1083" height="606" alt="Screenshot 2026-08-27 144130" src="https://github.com/user-attachments/assets/cb6bc25c-e146-44e0-8fdf-fcc4afcf2c1c" />
+ <img width="1077" height="752" alt="Screenshot 2026-08-27 144148" src="https://github.com/user-attachments/assets/4741122d-bd47-4a2d-a45a-2383497387c1" />
+
 ### 🔒 License
 Proprietary software. All rights reserved.
 
