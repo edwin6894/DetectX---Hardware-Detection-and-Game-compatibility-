@@ -7,6 +7,8 @@ I have used simple but professional UI designs that will make it easier for anyo
 Being built using web development languages , this software is more lightweight and faster.
 Compared to other already available softwares such as CPU-Z , GPU-Z and can you run it? The DetectX provides more accurate and all-in-one solution in detection and also live game compatibility as well PC SCORE rating
 
+Development platform: VS code 2026, Deepseek AI
+
 ### Features
 - ▶️Complete CPU detection (model, codename, year, cores, threads)
 - ▶️Separate iGPU and dGPU detection with vendor logos
