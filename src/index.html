@@ -150,6 +150,16 @@
                         <p id="igpuDetails"></p>
                     </div>
                     <div class="detail-grid" id="igpuDetailsGrid"></div>
+                    <!-- In iGPU Section -->
+<div class="benchmark-section" id="igpuBenchmarkSection">
+    <button class="benchmark-btn" onclick="runBenchmark('igpu')" id="igpuBenchmarkBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        Run Benchmark Test
+    </button>
+    <div class="benchmark-results" id="igpuBenchmarkResults" style="display: none;"></div>
+</div>
                 </div>
             </section>
 
@@ -168,6 +178,16 @@
                         <p id="dgpuDetails"></p>
                     </div>
                     <div class="detail-grid" id="dgpuDetailsGrid"></div>
+                    <!-- In dGPU Section -->
+<div class="benchmark-section" id="dgpuBenchmarkSection">
+    <button class="benchmark-btn" onclick="runBenchmark('dgpu')" id="dgpuBenchmarkBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        Run Benchmark Test
+    </button>
+    <div class="benchmark-results" id="dgpuBenchmarkResults" style="display: none;"></div>
+</div>
                 </div>
             </section>
 
@@ -231,5 +251,24 @@
 
     <script src="games-database.js"></script>
     <script src="script.js"></script>
+
+    
+    <!-- Update Modal -->
+<div id="updateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: #1a1d27; border: 1px solid #2a2f3f; border-radius: 15px; padding: 30px; max-width: 400px; width: 90%;">
+        <h3 style="margin-bottom: 15px;">🔄 Update Available</h3>
+        <p id="updateMessage" style="margin-bottom: 20px; color: #a0a6b8;">A new version is available!</p>
+        <div id="updateProgress" style="display: none; margin-bottom: 20px;">
+            <div style="width: 100%; height: 8px; background: #2a2f3f; border-radius: 4px; overflow: hidden;">
+                <div id="updateProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); transition: width 0.3s;"></div>
+            </div>
+            <p id="updateProgressText" style="text-align: center; margin-top: 10px; font-size: 14px;">Downloading... 0%</p>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button onclick="closeUpdateModal()" style="padding: 10px 20px; background: transparent; border: 1px solid #2a2f3f; border-radius: 8px; cursor: pointer; color: #a0a6b8;">Later</button>
+            <button id="updateActionBtn" onclick="downloadUpdate()" style="padding: 10px 20px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; cursor: pointer; color: white;">Download Update</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
