@@ -25,7 +25,7 @@ Development platform: VS code 2026, Deepseek AI
 - 250MB disk space
 
 ### Installation
-1. Download `DetectX-Setup-1.0.0.exe`
+1. Download `DetectX-Setup-version.exe`
 2. Run the installer
 3. Follow installation wizard
 4. Launch from desktop shortcut
