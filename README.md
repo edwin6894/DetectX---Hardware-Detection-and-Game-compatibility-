@@ -1,4 +1,4 @@
-## DetectX
+## DetectX   New Version : 1.1.0 (28-AUG-2026)
 
 Advanced Hardware Detection & Game Compatibility Analyzer
 ## DetectX is an Electron app or a software developed using Basic big 3 web development languages such as HTML,CSS & JS
