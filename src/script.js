@@ -1,6 +1,6 @@
 /// Global function for button click
 function openSystemInfo() {
-    console.log('Button clicked!');
+    
     
     if (window.detectX && window.detectX.openSystemInfo) {
         console.log('Calling detectX.openSystemInfo...');
@@ -47,7 +47,7 @@ async function detectSystem() {
         // Use Electron IPC to get system info
         systemInfo = await window.detectX.getSystemInfo();
         
-        console.log('System detected:', systemInfo);
+      
         
         updateUI();
         findCompatibleGames();
@@ -389,24 +389,6 @@ function generateTextReport(data) {
     
     return report;
 }
-// Hide scrollbar on landing page
-function startDetection() {
-    document.getElementById('landingPage').style.display = 'none';
-    document.getElementById('loadingScreen').style.display = 'block';
-    document.getElementById('statusIndicator').style.display = 'flex';
-    document.getElementById('exportBtn').style.display = 'flex';
-    
-    // Enable scrollbar for main content
-    document.body.style.overflow = 'auto';
-    
-    detectSystem();
-}
-
-// Disable scrollbar initially
-document.addEventListener('DOMContentLoaded', () => {
-    document.body.style.overflow = 'hidden';
-});
-
 // When main content shows, enable scrollbar
 function showMainContent() {
     document.getElementById('loadingScreen').style.display = 'none';
@@ -1166,63 +1148,61 @@ function findCompatibleGames() {
     displayGames(compatibleGames);
 }
 
-// =========== AUTO UPDATE SYSTEM ===========
 
-function checkForUpdates() {
+// =========== UPDATE SYSTEM ===========
+
+let updateAvailable = false;
+let updateVersion = null;
+
+// Auto-check on app start
+setTimeout(() => {
     if (window.detectX && window.detectX.checkForUpdates) {
         window.detectX.checkForUpdates();
+    }
+}, 7000); // 7 seconds (after app fully loads)
+
+function handleUpdateButtonClick() {
+    if (updateAvailable) {
+        document.getElementById('updateModal').style.display = 'flex';
+        document.getElementById('updateMessage').textContent = `Version ${updateVersion} is available!`;
+        document.getElementById('updateProgress').style.display = 'none';
+        document.getElementById('updateActionBtn').style.display = 'block';
+        document.getElementById('updateActionBtn').textContent = 'Download Update';
+        document.getElementById('updateActionBtn').onclick = downloadUpdate;
+    } else {
+        if (window.detectX && window.detectX.checkForUpdates) {
+            window.detectX.checkForUpdates();
+            
+            setTimeout(() => {
+                if (!updateAvailable) {
+                    document.getElementById('updateModal').style.display = 'flex';
+                    document.getElementById('updateMessage').textContent = '✅ You are up to date!';
+                    document.getElementById('updateProgress').style.display = 'none';
+                    document.getElementById('updateActionBtn').style.display = 'none';
+                }
+            }, 3000);
+        }
+    }
+}
+function handleUpdateAction() {
+    const btn = document.getElementById('updateActionBtn');
+    const text = btn.textContent.trim();
+    
+    if (text === 'Download Update') {
+        downloadUpdate();
+    } else if (text === 'Restart Now') {
+        installUpdate();
     }
 }
 
 function downloadUpdate() {
-    const modal = document.getElementById('updateModal');
-    const progress = document.getElementById('updateProgress');
-    const actionBtn = document.getElementById('updateActionBtn');
-    
-    progress.style.display = 'block';
-    actionBtn.style.display = 'none';
+    document.getElementById('updateProgress').style.display = 'block';
+    document.getElementById('updateActionBtn').style.display = 'none';
+    document.getElementById('updateMessage').textContent = 'Downloading...';
     
     if (window.detectX && window.detectX.downloadUpdate) {
         window.detectX.downloadUpdate();
     }
-}
-
-function closeUpdateModal() {
-    document.getElementById('updateModal').style.display = 'none';
-}
-
-function showUpdateModal(message) {
-    document.getElementById('updateModal').style.display = 'flex';
-    document.getElementById('updateMessage').textContent = message;
-    document.getElementById('updateProgress').style.display = 'none';
-    document.getElementById('updateActionBtn').style.display = 'block';
-    document.getElementById('updateActionBtn').textContent = 'Download Update';
-}
-
-// Listen for update events
-if (window.detectX) {
-    window.detectX.onUpdateAvailable((event, info) => {
-        showUpdateModal(`Version ${info.version} is available!`);
-    });
-    
-    window.detectX.onDownloadProgress((event, progress) => {
-        const percent = Math.round(progress.percent);
-        document.getElementById('updateProgressBar').style.width = percent + '%';
-        document.getElementById('updateProgressText').textContent = `Downloading... ${percent}%`;
-    });
-    
-    window.detectX.onUpdateDownloaded((event, info) => {
-        document.getElementById('updateModal').style.display = 'flex';
-        document.getElementById('updateMessage').textContent = `Version ${info.version} downloaded! Restart to install.`;
-        document.getElementById('updateProgress').style.display = 'none';
-        document.getElementById('updateActionBtn').style.display = 'block';
-        document.getElementById('updateActionBtn').textContent = 'Restart Now';
-        document.getElementById('updateActionBtn').onclick = installUpdate;
-    });
-    
-    window.detectX.onUpdateError((event, error) => {
-        console.error('Update error:', error);
-    });
 }
 
 function installUpdate() {
@@ -1231,7 +1211,89 @@ function installUpdate() {
     }
 }
 
+function closeUpdateModal() {
+    document.getElementById('updateModal').style.display = 'none';
+}
 
+// Update events
+if (window.detectX) {
+    window.detectX.onUpdateAvailable((event, data) => {
+        
+        updateAvailable = true;
+        updateVersion = data.version;
+        
+        // Update button
+        const badge = document.getElementById('updateBadge');
+        const btnText = document.getElementById('updateBtnText');
+        const btn = document.getElementById('updateBtn');
+        
+        badge.style.display = 'inline-block';
+        badge.textContent = '1';
+        btnText.textContent = '1 Update';
+        btn.classList.add('has-update');
+    });
+    
+    window.detectX.onUpdateNotAvailable(() => {
+       
+        updateAvailable = false;
+        updateVersion = null;
+        
+        const badge = document.getElementById('updateBadge');
+        const btnText = document.getElementById('updateBtnText');
+        const btn = document.getElementById('updateBtn');
+        
+        badge.style.display = 'none';
+        btnText.textContent = 'Updates';
+        btn.classList.remove('has-update');
+    });
+    
+    window.detectX.onDownloadProgress((event, data) => {
+        const percent = data.percent;
+        const bar = document.getElementById('updateProgressBar');
+        const text = document.getElementById('updateProgressText');
+        
+        bar.style.width = percent + '%';
+        text.textContent = `Downloading... ${percent}%`;
+        
+        if (percent >= 100) {
+            document.getElementById('updateMessage').textContent = 'Download complete! Installing...';
+            text.textContent = 'Installing...';
+        }
+    });
+    
+    window.detectX.onUpdateDownloaded((event, data) => {
+        document.getElementById('updateMessage').textContent = 'Download complete! Installing...';
+        
+        // Auto install after 2 seconds
+        setTimeout(() => {
+            installUpdate();
+        }, 2000);
+    });
+    
+    window.detectX.onUpdateError((event, data) => {
+        console.error('Update error:', data.message);
+    });
+}
+
+// Show update button
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('updateBtn');
+    if (btn) btn.style.display = 'flex';
+});
+// Get and display app version
+document.addEventListener('DOMContentLoaded', async () => {
+    const versionDisplay = document.getElementById('versionDisplay');
+    
+    if (versionDisplay && window.detectX && window.detectX.getVersion) {
+        try {
+            const version = await window.detectX.getVersion();
+            versionDisplay.textContent = `DetectX v${version}`;
+        } catch (error) {
+            console.log('Could not get version:', error);
+            versionDisplay.textContent = 'DetectX';
+        }
+    }
+});
 
 // Ensure openSystemInfo is global
 if (typeof window !== 'undefined') {
