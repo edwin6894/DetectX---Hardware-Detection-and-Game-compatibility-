@@ -6,7 +6,9 @@ const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.allowPrerelease = true;
+autoUpdater.forceDevUpdateConfig = true;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -48,102 +50,14 @@ function createWindow() {
         mainWindow = null;
     });
 }
+
 app.whenReady().then(() => {
     createWindow();
     
-    // Check for updates after app starts
     setTimeout(() => {
         checkForUpdates();
     }, 5000);
     
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        }
-    });
-});
-
-// Check for updates
-function checkForUpdates() {
-    if (!app.isPackaged) {
-        console.log('Development mode - skipping update check');
-        return;
-    }
-    
-    autoUpdater.checkForUpdates();
-}
-
-// Auto updater events
-autoUpdater.on('update-available', (info) => {
-    console.log('Update available:', info.version);
-    
-    // Send notification to renderer
-    if (mainWindow) {
-        mainWindow.webContents.send('update-available', {
-            version: info.version,
-            releaseNotes: info.releaseNotes
-        });
-    }
-});
-
-autoUpdater.on('update-not-available', () => {
-    console.log('App is up to date');
-    if (mainWindow) {
-        mainWindow.webContents.send('update-not-available');
-    }
-});
-
-autoUpdater.on('download-progress', (progress) => {
-    if (mainWindow) {
-        mainWindow.webContents.send('download-progress', {
-            percent: progress.percent,
-            transferred: progress.transferred,
-            total: progress.total,
-            bytesPerSecond: progress.bytesPerSecond
-        });
-    }
-});
-
-autoUpdater.on('update-downloaded', (info) => {
-    console.log('Update downloaded:', info.version);
-    if (mainWindow) {
-        mainWindow.webContents.send('update-downloaded', {
-            version: info.version
-        });
-    }
-});
-
-autoUpdater.on('error', (error) => {
-    console.error('Update error:', error);
-    if (mainWindow) {
-        mainWindow.webContents.send('update-error', {
-            message: error.message
-        });
-    }
-});
-
-// IPC handlers for updates
-ipcMain.handle('check-for-updates', async () => {
-    if (app.isPackaged) {
-        await autoUpdater.checkForUpdates();
-        return { success: true };
-    }
-    return { success: false, message: 'Development mode' };
-});
-
-ipcMain.handle('download-update', async () => {
-    await autoUpdater.downloadUpdate();
-    return { success: true };
-});
-
-ipcMain.handle('install-update', async () => {
-    autoUpdater.quitAndInstall();
-    return { success: true };
-});
-
-app.whenReady().then(() => {
-    createWindow();
-
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
@@ -157,25 +71,85 @@ app.on('window-all-closed', () => {
     }
 });
 
-// Open Windows System Information
-ipcMain.handle('open-system-info', async () => {
-    console.log('=== open-system-info handler called ===');
+function checkForUpdates() {
+    if (!app.isPackaged) {
+        return;
+    }
     
+    autoUpdater.checkForUpdates().catch(() => {});
+}
+
+autoUpdater.on('update-available', (info) => {
+    if (mainWindow) {
+        mainWindow.webContents.send('update-available', { version: info.version });
+    }
+});
+
+autoUpdater.on('update-not-available', () => {
+    if (mainWindow) {
+        mainWindow.webContents.send('update-not-available');
+    }
+});
+
+autoUpdater.on('download-progress', (progress) => {
+    if (mainWindow) {
+        mainWindow.webContents.send('download-progress', { percent: Math.round(progress.percent) });
+    }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+    if (mainWindow) {
+        mainWindow.webContents.send('update-downloaded', { version: info.version });
+    }
+});
+
+autoUpdater.on('error', (error) => {
+    if (error.message.includes('not signed')) {
+        return;
+    }
+    if (mainWindow) {
+        mainWindow.webContents.send('update-error', { message: error.message });
+    }
+});
+
+ipcMain.handle('check-for-updates', async () => {
+    if (app.isPackaged) {
+        await autoUpdater.checkForUpdates();
+        return { success: true };
+    }
+    return { success: false };
+});
+
+ipcMain.handle('get-version', async () => {
+    return app.getVersion();
+});
+
+ipcMain.handle('download-update', async () => {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+});
+
+ipcMain.handle('install-update', async () => {
+    setTimeout(() => {
+        autoUpdater.quitAndInstall(true, true);
+    }, 1000);
+    return { success: true };
+});
+
+ipcMain.handle('open-system-info', async () => {
     const { exec } = require('child_process');
     
     return new Promise((resolve) => {
         exec('cmd /c start msinfo32', (error) => {
             if (error) {
-                console.error('Exec error:', error);
                 resolve({ success: false, error: error.message });
             } else {
-                console.log('msinfo32 command executed');
                 resolve({ success: true });
             }
         });
     });
 });
-// Get System Information
+
 ipcMain.handle('get-system-info', async () => {
     try {
         const [cpu, graphics, mem, memLayout, osInfo] = await Promise.all([
@@ -270,12 +244,10 @@ ipcMain.handle('get-system-info', async () => {
             performanceScore: performanceScore
         };
     } catch (error) {
-        console.error('Error getting system info:', error);
         throw error;
     }
 });
 
-// Helper functions
 function formatCache(cache) {
     if (!cache) return 'N/A';
     
@@ -299,77 +271,46 @@ function getCPUData(brand) {
     if (!brand) return { codename: 'Unknown', year: new Date().getFullYear() - 3, lithography: 'Unknown' };
     
     const cpuDatabase = [
-        // ========== INTEL CORE ULTRA (2023-2026) ==========
         { pattern: /Core Ultra 9 285K|Core Ultra 7 265K|Core Ultra 5 245K/i, codename: 'Arrow Lake', year: 2024, lithography: 'Intel 20A' },
         { pattern: /Core Ultra 9 185H|Core Ultra 7 155H|Core Ultra 5 125H/i, codename: 'Meteor Lake', year: 2023, lithography: 'Intel 4' },
-        
-        // ========== INTEL 14TH GEN (2023-2024) ==========
         { pattern: /i9-14900K|i9-14900|i7-14700K|i7-14700|i5-14600K|i5-14400|i3-14100/i, codename: 'Raptor Lake Refresh', year: 2023, lithography: 'Intel 7' },
         { pattern: /i9-14900HX|i7-14700HX|i5-14500HX/i, codename: 'Raptor Lake-HX Refresh', year: 2024, lithography: 'Intel 7' },
-        
-        // ========== INTEL 13TH GEN (2022-2023) ==========
         { pattern: /i9-13900K|i9-13900|i7-13700K|i7-13700|i5-13600K|i5-13400|i3-13100/i, codename: 'Raptor Lake', year: 2022, lithography: 'Intel 7' },
         { pattern: /i9-13900H|i7-13700H|i5-13500H|i5-13450H/i, codename: 'Raptor Lake-H', year: 2023, lithography: 'Intel 7' },
         { pattern: /i7-1360P|i5-1340P|i3-1315U/i, codename: 'Raptor Lake-P', year: 2023, lithography: 'Intel 7' },
-        
-        // ========== INTEL 12TH GEN (2021-2022) ==========
         { pattern: /i9-12900K|i9-12900|i7-12700K|i7-12700|i5-12600K|i5-12400|i3-12100/i, codename: 'Alder Lake', year: 2021, lithography: 'Intel 7' },
         { pattern: /i9-12900H|i7-12700H|i5-12500H|i5-12450H/i, codename: 'Alder Lake-H', year: 2022, lithography: 'Intel 7' },
         { pattern: /i7-1260P|i5-1240P|i3-1220P/i, codename: 'Alder Lake-P', year: 2022, lithography: 'Intel 7' },
         { pattern: /i7-1255U|i5-1235U|i3-1215U/i, codename: 'Alder Lake-U', year: 2022, lithography: 'Intel 7' },
-        
-        // ========== INTEL 11TH GEN (2020-2021) ==========
         { pattern: /i9-11900K|i7-11700K|i5-11600K|i5-11400|i3-11100/i, codename: 'Rocket Lake', year: 2021, lithography: '14nm' },
         { pattern: /i7-1185G7|i7-1165G7|i5-1135G7|i5-1145G7|i3-1115G4|i3-1125G4/i, codename: 'Tiger Lake', year: 2020, lithography: '10nm SuperFin' },
         { pattern: /i7-11800H|i7-11850H|i5-11400H|i5-11260H|i7-11370H|i5-11300H/i, codename: 'Tiger Lake-H', year: 2021, lithography: '10nm SuperFin' },
-        
-        // ========== INTEL 10TH GEN (2019-2020) ==========
         { pattern: /i9-10900K|i7-10700K|i5-10600K|i5-10400|i3-10100/i, codename: 'Comet Lake', year: 2020, lithography: '14nm' },
         { pattern: /i7-10750H|i5-10300H|i7-10870H|i7-10875H/i, codename: 'Comet Lake-H', year: 2020, lithography: '14nm' },
         { pattern: /i7-1065G7|i5-1035G4|i3-1005G1|i5-1035G1/i, codename: 'Ice Lake', year: 2019, lithography: '10nm' },
         { pattern: /i7-10510U|i5-10210U|i3-10110U/i, codename: 'Comet Lake-U', year: 2019, lithography: '14nm' },
-        
-        // ========== INTEL 9TH GEN (2018-2019) ==========
         { pattern: /i9-9900K|i9-9900|i7-9700K|i7-9700|i5-9600K|i5-9400|i3-9100/i, codename: 'Coffee Lake Refresh', year: 2018, lithography: '14nm' },
         { pattern: /i9-9980HK|i7-9750H|i5-9300H/i, codename: 'Coffee Lake-H Refresh', year: 2019, lithography: '14nm' },
-        
-        // ========== INTEL 8TH GEN (2017-2018) ==========
         { pattern: /i7-8700K|i7-8700|i5-8600K|i5-8400|i3-8100/i, codename: 'Coffee Lake', year: 2017, lithography: '14nm' },
         { pattern: /i7-8750H|i5-8300H|i7-8850H|i5-8400H/i, codename: 'Coffee Lake-H', year: 2018, lithography: '14nm' },
         { pattern: /i7-8550U|i5-8250U|i3-8130U/i, codename: 'Kaby Lake-R', year: 2017, lithography: '14nm' },
-        
-        // ========== INTEL 7TH GEN (2016-2017) ==========
         { pattern: /i7-7700K|i7-7700|i5-7600K|i5-7400|i3-7100/i, codename: 'Kaby Lake', year: 2017, lithography: '14nm' },
         { pattern: /i7-7700HQ|i5-7300HQ|i7-7500U|i5-7200U/i, codename: 'Kaby Lake', year: 2016, lithography: '14nm' },
-        
-        // ========== INTEL 6TH GEN (2015-2016) ==========
         { pattern: /i7-6700K|i7-6700|i5-6600K|i5-6400|i3-6100/i, codename: 'Skylake', year: 2015, lithography: '14nm' },
         { pattern: /i7-6700HQ|i5-6300HQ|i7-6500U|i5-6200U/i, codename: 'Skylake', year: 2015, lithography: '14nm' },
-        
-        // ========== INTEL 5TH GEN (2015) ==========
         { pattern: /i7-5775C|i5-5675C/i, codename: 'Broadwell', year: 2015, lithography: '14nm' },
         { pattern: /i7-5500U|i5-5200U|i3-5010U/i, codename: 'Broadwell-U', year: 2015, lithography: '14nm' },
-        
-        // ========== INTEL 4TH GEN (2013-2014) ==========
         { pattern: /i7-4790K|i7-4790|i5-4690K|i5-4460|i3-4130/i, codename: 'Haswell', year: 2014, lithography: '22nm' },
         { pattern: /i7-4700HQ|i7-4700MQ|i5-4200U|i5-4210U|i7-4500U/i, codename: 'Haswell', year: 2013, lithography: '22nm' },
-        
-        // ========== INTEL 3RD GEN IVY BRIDGE (2012-2013) ==========
         { pattern: /i7-3770K|i7-3770|i5-3570K|i5-3470|i3-3220/i, codename: 'Ivy Bridge', year: 2012, lithography: '22nm' },
         { pattern: /i7-3520M|i7-3540M|i7-3610QM|i7-3630QM|i7-3720QM|i7-3740QM/i, codename: 'Ivy Bridge', year: 2012, lithography: '22nm' },
         { pattern: /i5-3210M|i5-3230M|i5-3320M|i5-3340M|i5-3360M|i5-3380M/i, codename: 'Ivy Bridge', year: 2012, lithography: '22nm' },
         { pattern: /i3-3110M|i3-3120M|i3-3130M|i3-3217U|i3-3227U|i3-3229Y/i, codename: 'Ivy Bridge', year: 2012, lithography: '22nm' },
         { pattern: /i7-3517U|i7-3537U|i7-3667U|i7-3687U|i5-3317U|i5-3337U|i5-3427U|i5-3437U/i, codename: 'Ivy Bridge', year: 2012, lithography: '22nm' },
-        
-        // ========== INTEL 2ND GEN SANDY BRIDGE (2011-2012) ==========
         { pattern: /i7-2600K|i7-2600|i5-2500K|i5-2400|i3-2100/i, codename: 'Sandy Bridge', year: 2011, lithography: '32nm' },
         { pattern: /i7-2670QM|i5-2410M|i7-2630QM|i5-2520M|i3-2310M/i, codename: 'Sandy Bridge', year: 2011, lithography: '32nm' },
-        
-        // ========== INTEL 1ST GEN NEHALEM (2009-2010) ==========
         { pattern: /i7-980X|i7-970|i7-960|i7-950|i7-930|i5-760|i5-750|i3-530/i, codename: 'Nehalem', year: 2010, lithography: '45nm' },
         { pattern: /i7-870|i7-860|i5-670|i5-650|i3-540/i, codename: 'Lynnfield', year: 2009, lithography: '45nm' },
-        
-        // ========== INTEL CORE 2 (2006-2011) ==========
         { pattern: /Core 2 Quad Q9|Core 2 Quad Q8/i, codename: 'Yorkfield', year: 2008, lithography: '45nm' },
         { pattern: /Core 2 Quad Q6/i, codename: 'Kentsfield', year: 2007, lithography: '65nm' },
         { pattern: /Core 2 Duo E8|Core 2 Duo E7/i, codename: 'Wolfdale', year: 2008, lithography: '45nm' },
@@ -377,28 +318,18 @@ function getCPUData(brand) {
         { pattern: /Core 2 Duo T9|Core 2 Duo T8|Core 2 Duo T7|Core 2 Duo T6|Core 2 Duo T5/i, codename: 'Penryn', year: 2008, lithography: '45nm' },
         { pattern: /Core 2 Duo T7|Core 2 Duo T5|Core 2 Duo T2/i, codename: 'Merom', year: 2006, lithography: '65nm' },
         { pattern: /Core 2 Solo/i, codename: 'Penryn', year: 2008, lithography: '45nm' },
-        
-        // ========== INTEL PENTIUM D (2005-2008) ==========
         { pattern: /Pentium D 9|Pentium D 8/i, codename: 'Presler', year: 2006, lithography: '65nm' },
         { pattern: /Pentium D 8|Pentium D 9/i, codename: 'Smithfield', year: 2005, lithography: '90nm' },
-        
-        // ========== INTEL PENTIUM 4 (2000-2008) ==========
         { pattern: /Pentium 4 6|Pentium 4 5/i, codename: 'Cedar Mill', year: 2006, lithography: '65nm' },
         { pattern: /Pentium 4 5|Pentium 4 6/i, codename: 'Prescott', year: 2004, lithography: '90nm' },
         { pattern: /Pentium 4 2|Pentium 4 3/i, codename: 'Northwood', year: 2002, lithography: '130nm' },
         { pattern: /Pentium 4 1/i, codename: 'Willamette', year: 2000, lithography: '180nm' },
-        
-        // ========== INTEL PENTIUM M (2003-2008) ==========
         { pattern: /Pentium M 7/i, codename: 'Dothan', year: 2004, lithography: '90nm' },
         { pattern: /Pentium M 1/i, codename: 'Banias', year: 2003, lithography: '130nm' },
-        
-        // ========== INTEL PENTIUM (2010-2020) ==========
         { pattern: /Pentium Gold G5|Pentium Silver N5/i, codename: 'Gemini Lake', year: 2017, lithography: '14nm' },
         { pattern: /Pentium G4|Pentium G3/i, codename: 'Haswell', year: 2013, lithography: '22nm' },
         { pattern: /Pentium N3|Pentium N4/i, codename: 'Braswell', year: 2015, lithography: '14nm' },
         { pattern: /Pentium B9|Pentium B8|Pentium 2/i, codename: 'Sandy Bridge', year: 2011, lithography: '32nm' },
-        
-        // ========== INTEL CELERON (2000-2020) ==========
         { pattern: /Celeron N4|Celeron N3|Celeron N2/i, codename: 'Gemini Lake', year: 2017, lithography: '14nm' },
         { pattern: /Celeron J4|Celeron J3|Celeron J1/i, codename: 'Apollo Lake', year: 2016, lithography: '14nm' },
         { pattern: /Celeron G1|Celeron G5|Celeron G4/i, codename: 'Sandy Bridge', year: 2011, lithography: '32nm' },
@@ -406,54 +337,28 @@ function getCPUData(brand) {
         { pattern: /Celeron D 3|Celeron D 4/i, codename: 'Prescott', year: 2004, lithography: '90nm' },
         { pattern: /Celeron 2|Celeron 1/i, codename: 'Northwood', year: 2002, lithography: '130nm' },
         { pattern: /Celeron 8|Celeron 7|Celeron B/i, codename: 'Sandy Bridge', year: 2011, lithography: '32nm' },
-        
-        // ========== INTEL ATOM (2008-2020) ==========
         { pattern: /Atom x7|Atom x5/i, codename: 'Cherry Trail', year: 2015, lithography: '14nm' },
         { pattern: /Atom Z3|Atom Z2/i, codename: 'Bay Trail', year: 2013, lithography: '22nm' },
         { pattern: /Atom N2|Atom N4|Atom N5/i, codename: 'Pineview', year: 2010, lithography: '45nm' },
         { pattern: /Atom N270|Atom N280|Atom 230/i, codename: 'Diamondville', year: 2008, lithography: '45nm' },
-        
-        // ========== INTEL XEON ==========
         { pattern: /Xeon E5|Xeon E3/i, codename: 'Sandy Bridge-EP', year: 2012, lithography: '32nm' },
         { pattern: /Xeon W|Xeon Gold|Xeon Silver/i, codename: 'Skylake-SP', year: 2017, lithography: '14nm' },
-        
-        // ========== AMD RYZEN 9000 (2024) ==========
         { pattern: /Ryzen 9 9950X|Ryzen 9 9900X|Ryzen 7 9700X|Ryzen 5 9600X/i, codename: 'Granite Ridge', year: 2024, lithography: '4nm' },
-        
-        // ========== AMD RYZEN 8000 (2024) ==========
         { pattern: /Ryzen 7 8700G|Ryzen 5 8600G|Ryzen 5 8500G/i, codename: 'Phoenix', year: 2024, lithography: '4nm' },
-        
-        // ========== AMD RYZEN 7000 (2022) ==========
         { pattern: /Ryzen 9 7950X|Ryzen 9 7900X|Ryzen 7 7700X|Ryzen 5 7600X/i, codename: 'Raphael', year: 2022, lithography: '5nm' },
         { pattern: /Ryzen 9 7945HX|Ryzen 7 7745HX|Ryzen 5 7645HX/i, codename: 'Dragon Range', year: 2023, lithography: '5nm' },
         { pattern: /Ryzen 7 7840U|Ryzen 5 7640U/i, codename: 'Phoenix', year: 2023, lithography: '4nm' },
-        
-        // ========== AMD RYZEN 5000 (2020) ==========
         { pattern: /Ryzen 9 5950X|Ryzen 9 5900X|Ryzen 7 5800X|Ryzen 5 5600X/i, codename: 'Vermeer', year: 2020, lithography: '7nm' },
         { pattern: /Ryzen 9 5900HX|Ryzen 7 5800H|Ryzen 5 5600H/i, codename: 'Cezanne', year: 2021, lithography: '7nm' },
         { pattern: /Ryzen 7 5700U|Ryzen 5 5500U/i, codename: 'Lucienne', year: 2021, lithography: '7nm' },
-        
-        // ========== AMD RYZEN 4000 (2020) ==========
         { pattern: /Ryzen 7 4800H|Ryzen 5 4600H|Ryzen 7 4700U|Ryzen 5 4500U/i, codename: 'Renoir', year: 2020, lithography: '7nm' },
-        
-        // ========== AMD RYZEN 3000 (2019) ==========
         { pattern: /Ryzen 9 3950X|Ryzen 9 3900X|Ryzen 7 3800X|Ryzen 5 3600|Ryzen 5 3600X/i, codename: 'Matisse', year: 2019, lithography: '7nm' },
-        
-        // ========== AMD RYZEN 2000 (2018) ==========
         { pattern: /Ryzen 7 2700X|Ryzen 5 2600|Ryzen 5 2600X|Ryzen 3 2200G/i, codename: 'Pinnacle Ridge', year: 2018, lithography: '12nm' },
-        
-        // ========== AMD RYZEN 1000 (2017) ==========
         { pattern: /Ryzen 7 1700X|Ryzen 7 1700|Ryzen 5 1600|Ryzen 5 1600X|Ryzen 3 1200/i, codename: 'Summit Ridge', year: 2017, lithography: '14nm' },
-        
-        // ========== AMD FX SERIES (2011-2014) ==========
         { pattern: /FX-9590|FX-9370|FX-8350|FX-8320|FX-6300|FX-4300/i, codename: 'Vishera', year: 2012, lithography: '32nm' },
         { pattern: /FX-8150|FX-8120|FX-6100|FX-4100/i, codename: 'Zambezi', year: 2011, lithography: '32nm' },
-        
-        // ========== AMD PHENOM (2007-2010) ==========
         { pattern: /Phenom II X6|Phenom II X4|Phenom II X2/i, codename: 'Thuban/Deneb', year: 2009, lithography: '45nm' },
         { pattern: /Phenom X4|Phenom X3/i, codename: 'Agena', year: 2007, lithography: '65nm' },
-        
-        // ========== AMD ATHLON (1999-2010) ==========
         { pattern: /Athlon II X4|Athlon II X2/i, codename: 'Propus/Regor', year: 2009, lithography: '45nm' },
         { pattern: /Athlon 64 X2/i, codename: 'Windsor/Brisbane', year: 2006, lithography: '65nm' },
         { pattern: /Athlon 64 FX/i, codename: 'SledgeHammer', year: 2003, lithography: '130nm' },
@@ -461,38 +366,24 @@ function getCPUData(brand) {
         { pattern: /Athlon XP 3|Athlon XP 2/i, codename: 'Barton', year: 2003, lithography: '130nm' },
         { pattern: /Athlon XP 1/i, codename: 'Palomino/Thoroughbred', year: 2001, lithography: '130nm' },
         { pattern: /Athlon Thunderbird|Athlon 1/i, codename: 'Thunderbird', year: 2000, lithography: '180nm' },
-        
-        // ========== AMD DURON (2000-2004) ==========
         { pattern: /Duron 1|Duron 9|Duron 8/i, codename: 'Applebred', year: 2003, lithography: '130nm' },
         { pattern: /Duron 1|Duron 9/i, codename: 'Morgan', year: 2001, lithography: '180nm' },
         { pattern: /Duron 6|Duron 7/i, codename: 'Spitfire', year: 2000, lithography: '180nm' },
-        
-        // ========== AMD SEMPRON (2004-2014) ==========
         { pattern: /Sempron 3|Sempron 2/i, codename: 'Sargas', year: 2009, lithography: '45nm' },
         { pattern: /Sempron 1|Sempron 3/i, codename: 'Manila', year: 2006, lithography: '90nm' },
         { pattern: /Sempron 2|Sempron 3/i, codename: 'Palermo', year: 2004, lithography: '90nm' },
-        
-        // ========== AMD TURION (2005-2008) ==========
         { pattern: /Turion 64 X2/i, codename: 'Tyler', year: 2007, lithography: '65nm' },
         { pattern: /Turion 64/i, codename: 'Lancaster', year: 2005, lithography: '90nm' },
-        
-        // ========== AMD OPTERON ==========
         { pattern: /Opteron 6|Opteron 4/i, codename: 'Istanbul', year: 2009, lithography: '45nm' },
         { pattern: /Opteron 2|Opteron 1/i, codename: 'Santa Rosa', year: 2006, lithography: '90nm' },
-        
-        // ========== AMD APU (2011-2016) ==========
         { pattern: /A10-7|A10-6|A8-7|A8-6|A6-7|A6-6/i, codename: 'Kaveri', year: 2014, lithography: '28nm' },
         { pattern: /A10-5|A8-5|A6-5|A4-5/i, codename: 'Trinity', year: 2012, lithography: '32nm' },
         { pattern: /A8-3|A6-3|A4-3|E2-3/i, codename: 'Llano', year: 2011, lithography: '32nm' },
         { pattern: /A6-9|A4-9|E2-9/i, codename: 'Bristol Ridge', year: 2016, lithography: '28nm' },
         { pattern: /A9-9|A6-9|E2-9/i, codename: 'Stoney Ridge', year: 2016, lithography: '28nm' },
-        
-        // ========== VIA PROCESSORS ==========
         { pattern: /VIA C7/i, codename: 'Esther', year: 2005, lithography: '90nm' },
         { pattern: /VIA Nano/i, codename: 'Isaiah', year: 2008, lithography: '65nm' },
         { pattern: /VIA C3/i, codename: 'Nehemiah', year: 2001, lithography: '130nm' },
-        
-        // ========== APPLE SILICON ==========
         { pattern: /Apple M3|Apple M2|Apple M1/i, codename: 'Apple Silicon', year: 2021, lithography: '5nm' }
     ];
     
@@ -502,7 +393,6 @@ function getCPUData(brand) {
         }
     }
     
-    // Enhanced fallback for Intel
     const b = brand.toLowerCase();
     if (b.includes('intel')) {
         const match = brand.match(/i[3579]-(\d{1,2})/i);
@@ -536,7 +426,6 @@ function getCPUData(brand) {
         return { codename: 'Intel Processor', year: 2015, lithography: 'Unknown' };
     }
     
-    // Enhanced fallback for AMD
     if (b.includes('amd') || b.includes('ryzen') || b.includes('athlon') || b.includes('phenom') || b.includes('fx') || b.includes('sempron') || b.includes('duron') || b.includes('turion') || b.includes('opteron')) {
         const match = brand.match(/Ryzen [3579] (\d{4})/i);
         if (match) {
