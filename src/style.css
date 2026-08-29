@@ -1167,3 +1167,169 @@ body.no-scroll {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+/* Floating Game Cards */
+@keyframes float-card {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.game-card {
+    animation: float-card 4s ease-in-out infinite;
+}
+
+/* Stagger the animation for each card */
+.games-grid .game-card:nth-child(2n) {
+    animation-delay: 1s;
+}
+
+.games-grid .game-card:nth-child(3n) {
+    animation-delay: 2s;
+}
+
+.games-grid .game-card:nth-child(4n) {
+    animation-delay: 3s;
+}
+
+/* Hover effect - stop floating and lift */
+.game-card:hover {
+    animation-play-state: paused;
+    transform: translateY(-15px) scale(1.05);
+    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
+    border-color: var(--accent);
+}
+
+/* Smooth transition for hover */
+.game-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+/* Better Benchmark Results */
+@keyframes slide-up {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.benchmark-results {
+    animation: slide-up 0.6s ease-out;
+}
+
+/* Animated score counter */
+@keyframes count-up {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.benchmark-score-circle {
+    animation: count-up 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Shine effect on score */
+.benchmark-score-circle::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.2) 50%, transparent 60%);
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
+}
+
+/* Progress bars animate smoothly */
+.mini-fill, .chart-fill {
+    transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cards stagger animation */
+.benchmark-detail-card {
+    animation: slide-up 0.5s ease-out;
+}
+
+.benchmark-detail-card:nth-child(1) { animation-delay: 0.1s; }
+.benchmark-detail-card:nth-child(2) { animation-delay: 0.2s; }
+.benchmark-detail-card:nth-child(3) { animation-delay: 0.3s; }
+.benchmark-detail-card:nth-child(4) { animation-delay: 0.4s; }
+.benchmark-detail-card:nth-child(5) { animation-delay: 0.5s; }
+.benchmark-detail-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* Glow effect on benchmark button */
+.benchmark-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.benchmark-btn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+    animation: shine 2s infinite;
+}
+
+/* Verdict animation */
+.benchmark-verdict {
+    animation: slide-up 0.6s ease-out 0.5s both;
+}
+
+/* Stats hover effect */
+.stat-item {
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent);
+}
+/* FPS badges subtle pulse */
+.fps-badge {
+    animation: pulse-fps 2s ease-in-out infinite;
+}
+
+@keyframes pulse-fps {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+.update-btn {
+    display: flex;
+    align-items:center;
+    gap: 8px;
+    padding: 11px 18px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.update-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.update-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.update-btn.has-update {
+    border-color: #ef4444;
+    color: #ef4444;
+    animation: pulse-update 2s infinite;
+}
+
+@keyframes pulse-update {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
