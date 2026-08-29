@@ -1,6 +1,6 @@
 {
-  "name": "Detectx",
-  "version": "1.1.0",
+  "name": "DetectX",
+  "version": "1.1.1",
   "description": "DetectX - Advanced Hardware Detection & Game Compatibility Analyzer",
   "main": "main.js",
   "author": "Edwin Thomas",
@@ -30,7 +30,8 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
-      "publisherName": "Edwin Thomas"
+      "publisherName": "Edwin Thomas",
+       "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
